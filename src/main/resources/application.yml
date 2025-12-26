@@ -1,0 +1,7 @@
+spring.application.name=plugzy
+
+spring.datasource.url=jdbc:mysql://dev:1234@localhost:3306/hb_cda_springblog?createDatabaseIfNotExist=true
+
+spring.jpa.hibernate.ddl-auto=update
+
+spring.jpa.show-sql=true
