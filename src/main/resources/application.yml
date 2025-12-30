@@ -1,7 +1,19 @@
-spring.application.name=plugzy
+spring:
+  application:
+    name: plugzy
+  config:
+    import: "classpath:env.properties"
 
-spring.datasource.url=jdbc:mysql://dev:1234@localhost:3306/hb_cda_springblog?createDatabaseIfNotExist=true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/plugzy_db
+    username: plugzy
+    password: plugzymdp
 
-spring.jpa.hibernate.ddl-auto=update
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
 
-spring.jpa.show-sql=true
+  flyway:
+    enabled: false
