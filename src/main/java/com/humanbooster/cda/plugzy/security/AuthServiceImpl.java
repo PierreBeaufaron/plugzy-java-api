@@ -62,17 +62,24 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public String generateRefreshToken(String idUser) {
+    public String generateRefreshToken(String idUser, String deviceId) {
         UUID userId = UUID.fromString(idUser);
         User user = userRepository.findById(userId).orElseThrow();
 
-        // Multi-devices : on NE supprime PAS les tokens existants
+        String normalizedDeviceId = normalizeDeviceId(deviceId);
+
+        if (normalizedDeviceId != null) {
+            tokenRepository.deleteByUserAndDeviceId(user, normalizedDeviceId);
+            tokenRepository.flush();
+        }
+
         String tokenValue = UUID.randomUUID().toString();
 
         RefreshToken refreshToken = new RefreshToken(
                 tokenValue,
-                LocalDateTime.now().plus(30, ChronoUnit.DAYS),
-                user
+                LocalDateTime.now().plusDays(30),
+                user,
+                normalizedDeviceId
         );
 
         tokenRepository.save(refreshToken);
@@ -82,23 +89,35 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public TokenPair validateRefreshToken(String tokenValue) {
+    public TokenPair validateRefreshToken(String tokenValue,  String deviceId) {
         RefreshToken refreshToken = tokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new RuntimeException("Refresh token not found"));
 
         if (refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             // On supprime le token expiré
             tokenRepository.delete(refreshToken);
+            tokenRepository.flush();
             throw new RuntimeException("Refresh token expired");
+        }
+
+        String normalizedDeviceId = normalizeDeviceId(deviceId);
+
+        // Si deviceId fourni, on vérifie qu'il correspond (anti-vol)
+        if (normalizedDeviceId != null) {
+            String storedDeviceId = refreshToken.getDeviceId();
+            if (storedDeviceId == null || !storedDeviceId.equals(normalizedDeviceId)) {
+                throw new RuntimeException("Refresh token does not match device");
+            }
         }
 
         User user = refreshToken.getUser();
 
         // Rotation multi-devices : on supprime seulement ce refresh token
         tokenRepository.delete(refreshToken);
+        tokenRepository.flush();
 
         // On crée un nouveau refresh token (nouvelle session pour ce device)
-        String newRefreshToken = generateRefreshToken(user.getId().toString());
+        String newRefreshToken = generateRefreshToken(user.getId().toString(), normalizedDeviceId);
         String newJwt = jwtUtil.generateToken(user);
 
         return new TokenPair(newRefreshToken, newJwt);
@@ -106,13 +125,29 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void logout(String refreshToken) {
-        tokenRepository.findByToken(refreshToken).ifPresent(tokenRepository::delete);
+    public void logout(String refreshToken, String deviceId) {
+        String normalizedDeviceId = normalizeDeviceId(deviceId);
+
+        tokenRepository.findByToken(refreshToken).ifPresent(rt -> {
+            // Si deviceId fourni, on check avant de delete
+            if (normalizedDeviceId != null) {
+                if (normalizedDeviceId.equals(rt.getDeviceId())) {
+                    tokenRepository.delete(rt);
+                }
+            } else {
+                // Pas de deviceId (Postman / script / client legacy)
+                tokenRepository.delete(rt);
+            }
+        });
     }
 
     @Transactional
     @Scheduled(fixedDelay = 24, timeUnit = TimeUnit.HOURS)
     void cleanExpiredTokens() {
         tokenRepository.deleteExpired();
+    }
+
+    private String normalizeDeviceId(String deviceId) {
+        return (deviceId == null || deviceId.isBlank()) ? null : deviceId;
     }
 }

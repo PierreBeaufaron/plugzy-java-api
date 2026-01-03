@@ -17,6 +17,8 @@ public class RefreshToken {
     private LocalDateTime createdAt;
     @Column(nullable = false)
     private LocalDateTime expiresAt;
+    @Column(name = "device_id", length = 128)
+    private String deviceId;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -25,12 +27,22 @@ public class RefreshToken {
     public RefreshToken() {
     }
 
-    public RefreshToken(String token, LocalDateTime expiresAt, User user) {
+    public RefreshToken(String token, LocalDateTime createdAt, LocalDateTime expiresAt, User user) {
+        this.token = token;
+        this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
+        this.user = user;
+    }
+
+    public RefreshToken(String token, LocalDateTime expiresAt, User user, String deviceId) {
         this.token = token;
         this.createdAt = LocalDateTime.now();
         this.expiresAt = expiresAt;
         this.user = user;
+        this.deviceId = deviceId;
     }
+
+
 
     public UUID getId() {
         return id;
@@ -74,5 +86,13 @@ public class RefreshToken {
 
     public boolean isExpired() {
         return expiresAt.isBefore(LocalDateTime.now());
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
     }
 }

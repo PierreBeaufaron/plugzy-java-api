@@ -7,9 +7,9 @@ public interface AuthService {
 
     LoginResponseDTO login(LoginCredentialsDTO credentials);
 
-    String generateRefreshToken(String userId);
+    String generateRefreshToken(String userId, String deviceId);
 
-    TokenPair validateRefreshToken(String token);
+    TokenPair validateRefreshToken(String token, String deviceId);
 
-    void logout(String refreshToken);
+    void logout(String refreshToken, String deviceId);
 }

@@ -19,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 public class AuthController {
 
+    private static final String DEVICE_HEADER = "X-Device-Id";
+
     private final AuthService authService;
 
     public AuthController(AuthService authService) {
@@ -26,11 +28,18 @@ public class AuthController {
     }
 
     @PostMapping("/api/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginCredentialsDTO credentials) {
+    public ResponseEntity<LoginResponseDTO> login(
+            @RequestBody @Valid LoginCredentialsDTO credentials,
+            @RequestHeader(name = DEVICE_HEADER, required = false) String deviceId
+    ) {
         LoginResponseDTO responseDto = authService.login(credentials);
 
         // Refresh token (cookie httpOnly)
-        String refreshToken = authService.generateRefreshToken(responseDto.getUser().getId().toString());
+        String refreshToken = authService.generateRefreshToken(
+                responseDto.getUser().getId().toString(),
+                deviceId
+        );
+
         ResponseCookie refreshCookie = generateRefreshCookie(refreshToken);
 
         return ResponseEntity
@@ -42,7 +51,8 @@ public class AuthController {
     @PostMapping("/api/refresh-token")
     public ResponseEntity<SimpleMessageDTO> refreshToken(
             @CookieValue(name = "refresh-token", required = false) String token,
-            @RequestHeader(name = "X-Refresh-Required", required = false) String refreshRequired
+            @RequestHeader(name = "X-Refresh-Required", required = false) String refreshRequired,
+            @RequestHeader(name = DEVICE_HEADER, required = false) String deviceId
     ) {
         boolean strict = "true".equalsIgnoreCase(refreshRequired);
 
@@ -54,7 +64,7 @@ public class AuthController {
         }
 
         try {
-            TokenPair tokens = authService.validateRefreshToken(token);
+            TokenPair tokens = authService.validateRefreshToken(token, deviceId);
             ResponseCookie refreshCookie = generateRefreshCookie(tokens.getRefreshToken());
 
             return ResponseEntity
@@ -69,10 +79,11 @@ public class AuthController {
 
     @PostMapping("/api/logout")
     public ResponseEntity<Void> logout(
-            @CookieValue(name = "refresh-token", required = false) String token
+            @CookieValue(name = "refresh-token", required = false) String token,
+            @RequestHeader(name = DEVICE_HEADER, required = false) String deviceId
     ) {
         if (token != null) {
-            authService.logout(token);
+            authService.logout(token, deviceId);
         }
 
         ResponseCookie deleteCookie = ResponseCookie.from("refresh-token", "")

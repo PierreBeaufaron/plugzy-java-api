@@ -75,7 +75,9 @@ public class SecurityConfig {
                 "Content-Type",
                 "Accept",
                 "X-Requested-With",
-                "X-Refresh-Required"));
+                "X-Refresh-Required",
+                "X-Device-Id"
+        ));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
