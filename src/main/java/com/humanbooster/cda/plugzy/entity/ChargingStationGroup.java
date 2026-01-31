@@ -12,7 +12,7 @@ public class ChargingStationGroup {
     private UUID id;
     @Column(nullable = false)
     private String title;
-    @Lob
+    @Column(columnDefinition = "text")
     private String description;
 
     @ManyToOne
