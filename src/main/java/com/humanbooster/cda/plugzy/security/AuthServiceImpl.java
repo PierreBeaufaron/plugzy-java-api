@@ -1,24 +1,30 @@
 package com.humanbooster.cda.plugzy.security;
 
-import com.humanbooster.cda.plugzy.controller.dto.auth.LoginCredentialsDTO;
-import com.humanbooster.cda.plugzy.controller.dto.auth.LoginResponseDTO;
+import com.humanbooster.cda.plugzy.controller.dto.auth.*;
 import com.humanbooster.cda.plugzy.controller.dto.user.UserPublicDTO;
 import com.humanbooster.cda.plugzy.controller.dto.mapper.UserMapper;
 import com.humanbooster.cda.plugzy.entity.RefreshToken;
 import com.humanbooster.cda.plugzy.entity.User;
+import com.humanbooster.cda.plugzy.entity.Role;
 import com.humanbooster.cda.plugzy.repository.RefreshTokenRepository;
+import com.humanbooster.cda.plugzy.repository.RoleRepository;
 import com.humanbooster.cda.plugzy.repository.UserRepository;
 import com.humanbooster.cda.plugzy.security.jwt.JwtUtil;
+import com.humanbooster.cda.plugzy.service.MailService;
 import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -29,17 +35,27 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
     private final RefreshTokenRepository tokenRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
+
 
     public AuthServiceImpl(AuthenticationManager authManager,
                            JwtUtil jwtUtil,
                            UserMapper userMapper,
                            RefreshTokenRepository tokenRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           RoleRepository roleRepository,
+                           PasswordEncoder passwordEncoder,
+                           MailService mailService) {
         this.authManager = authManager;
         this.jwtUtil = jwtUtil;
         this.userMapper = userMapper;
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.mailService = mailService;
     }
 
     @Override
@@ -54,11 +70,85 @@ public class AuthServiceImpl implements AuthService {
 
         User user = (User) authentication.getPrincipal();
 
+        // On refuse le login si pas vérifié
+        if (!user.isVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte non vérifié");
+        }
+
         String jwt = jwtUtil.generateToken(user);
         UserPublicDTO userDTO = userMapper.convertToDTO(user);
 
         return new LoginResponseDTO(jwt, userDTO);
     }
+
+    @Override
+    @Transactional
+    public RegisterResponseDTO register(RegisterRequestDTO request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
+        }
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username déjà utilisé");
+        }
+
+        Role roleUser = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "ROLE_USER introuvable"));
+
+        User u = new User();
+        u.setUsername(request.getUsername());
+        u.setEmail(request.getEmail());
+        u.setPassword(passwordEncoder.encode(request.getPassword()));
+        u.setPhone(request.getPhone());
+        u.setRole(roleUser);
+
+        u.setVerified(false);
+
+        String code = generate6Digits();
+        u.setVerificationCode(code);
+        u.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
+
+        User saved = userRepository.save(u);
+
+        // envoi mail
+        mailService.sendVerificationCode(saved.getEmail(), code);
+
+        return new RegisterResponseDTO(saved.getId(), saved.getEmail(), saved.isVerified());
+    }
+
+    @Override
+    @Transactional
+    public void verify(VerifyRequestDTO request) {
+
+        User u = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+
+        if (u.isVerified()) return;
+
+        if (u.getVerificationCode() == null || u.getVerificationCodeExpiresAt() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun code en attente");
+        }
+
+        if (u.getVerificationCodeExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code expiré");
+        }
+
+        if (!u.getVerificationCode().equals(request.getCode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code invalide");
+        }
+
+        u.setVerified(true);
+        u.setVerificationCode(null);
+        u.setVerificationCodeExpiresAt(null);
+
+        userRepository.save(u);
+    }
+
+    private String generate6Digits() {
+        int n = ThreadLocalRandom.current().nextInt(0, 1_000_000);
+        return String.format("%06d", n);
+    }
+
 
     @Override
     @Transactional

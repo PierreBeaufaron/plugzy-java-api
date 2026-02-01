@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/login").permitAll()
                         .requestMatchers("/api/logout").permitAll()
                         .requestMatchers("/api/refresh-token").permitAll()
+                        .requestMatchers("/api/account/register").permitAll()
+                        .requestMatchers("/api/account/verify").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/account/**").authenticated()
                         .requestMatchers("/api/protected").authenticated()

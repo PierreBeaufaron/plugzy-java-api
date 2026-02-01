@@ -1,7 +1,6 @@
 package com.humanbooster.cda.plugzy.controller;
 
-import com.humanbooster.cda.plugzy.controller.dto.auth.LoginCredentialsDTO;
-import com.humanbooster.cda.plugzy.controller.dto.auth.LoginResponseDTO;
+import com.humanbooster.cda.plugzy.controller.dto.auth.*;
 import com.humanbooster.cda.plugzy.controller.dto.common.SimpleMessageDTO;
 import com.humanbooster.cda.plugzy.entity.User;
 import com.humanbooster.cda.plugzy.security.AuthService;
@@ -97,6 +96,22 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
                 .build();
+    }
+
+    @PostMapping("/api/account/register")
+    public ResponseEntity<RegisterResponseDTO> register(
+            @RequestBody @Valid RegisterRequestDTO request
+    ) {
+        RegisterResponseDTO response = authService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/api/account/verify")
+    public ResponseEntity<Void> verify(
+            @RequestBody @Valid VerifyRequestDTO request
+    ) {
+        authService.verify(request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/api/protected")

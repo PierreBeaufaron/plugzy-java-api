@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String phone;
     private String verificationCode;
+    private LocalDateTime verificationCodeExpiresAt;
     private boolean isVerified = false;
 
     @ManyToOne
@@ -91,6 +93,14 @@ public class User implements UserDetails {
 
     public void setVerificationCode(String verrificationCode) {
         this.verificationCode = verrificationCode;
+    }
+
+    public LocalDateTime getVerificationCodeExpiresAt() {
+        return verificationCodeExpiresAt;
+    }
+
+    public void setVerificationCodeExpiresAt(LocalDateTime verificationCodeExpiresAt) {
+        this.verificationCodeExpiresAt = verificationCodeExpiresAt;
     }
 
     public boolean isVerified() {
