@@ -1,6 +1,5 @@
 package com.humanbooster.cda.plugzy.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humanbooster.cda.plugzy.entity.User;
 import com.humanbooster.cda.plugzy.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthControllerIT {
 
     @Autowired MockMvc mockMvc;
-    @Autowired ObjectMapper objectMapper;
     @Autowired UserRepository userRepository;
 
     @MockitoBean
