@@ -1,13 +1,17 @@
 package com.humanbooster.cda.plugzy.controller;
 
+import com.humanbooster.cda.plugzy.entity.Role;
 import com.humanbooster.cda.plugzy.entity.User;
+import com.humanbooster.cda.plugzy.repository.RoleRepository;
 import com.humanbooster.cda.plugzy.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,14 +25,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @Transactional
-class AuthControllerIT {
+class AuthControllerITest {
 
     @Autowired MockMvc mockMvc;
     @Autowired UserRepository userRepository;
+    @Autowired RoleRepository roleRepository;
 
     @MockitoBean
     private JavaMailSender mailSender;
+
+    @BeforeEach
+    void seedRoles() {
+        roleRepository.findByName("ROLE_USER")
+                .orElseGet(() -> roleRepository.save(new Role("ROLE_USER")));
+    }
 
     @Test
     void register_shouldReturn201_andCreateUser() throws Exception {

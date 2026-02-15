@@ -1,6 +1,10 @@
 package com.humanbooster.cda.plugzy.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,12 +22,20 @@ public class User implements UserDetails {
     private UUID id;
 
     @Column(nullable = false, unique = true)
+    @NotBlank
+    @Size(min = 6, max = 80)
     private String username;
     @Column(nullable = false, unique = true)
+    @Email
+    @NotBlank
+    @Size(min = 6, max = 80)
     private String email;
     @Column(nullable = false)
+    @NotBlank
     private String password;
     @Column(nullable = false)
+    @NotBlank
+    @Pattern(regexp = "^\\+?[0-9 ]{8,15}$")
     private String phone;
     private String verificationCode;
     private LocalDateTime verificationCodeExpiresAt;

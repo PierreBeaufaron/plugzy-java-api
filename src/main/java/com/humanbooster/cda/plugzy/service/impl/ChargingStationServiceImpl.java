@@ -82,18 +82,10 @@ public class ChargingStationServiceImpl implements ChargingStationService {
         Page<StationListItemProjection> page =
                 stationRepository.findListInBounds(swLat, swLng, neLat, neLng, minPower, maxPower, freeStanding, pageable);
 
-        List<StationListItemDTO> items = page.getContent().stream().map(p -> {
-            StationListItemDTO dto = new StationListItemDTO();
-            dto.setId(p.getId());
-            dto.setName(p.getName());
-            dto.setPower(p.getPower());
-            dto.setPrice(p.getPrice());
-            dto.setFreeStanding(Boolean.TRUE.equals(p.getFreeStanding()));
-            dto.setAddress(p.getAddress());
-            dto.setZipCode(p.getZipCode());
-            dto.setCity(p.getCity());
-            return dto;
-        }).toList();
+        List<StationListItemDTO> items = page.getContent()
+                .stream()
+                .map(mapper::toListItemDto)
+                .toList();
 
         return new PagedResponse<>(
                 items,

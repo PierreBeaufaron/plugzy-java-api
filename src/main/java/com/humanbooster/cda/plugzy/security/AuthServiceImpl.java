@@ -58,6 +58,13 @@ public class AuthServiceImpl implements AuthService {
         this.mailService = mailService;
     }
 
+    /**
+     * Authentifie un utilisateur et génère un JWT si les identifiants sont valides.
+     *
+     * @param credentials Les informations de connexion (email / mot de passe)
+     * @return Un DTO contenant le JWT et les informations publiques de l'utilisateur
+     * @throws ResponseStatusException si le compte n'est pas vérifié
+     */
     @Override
     public LoginResponseDTO login(LoginCredentialsDTO credentials) {
 
@@ -81,6 +88,14 @@ public class AuthServiceImpl implements AuthService {
         return new LoginResponseDTO(jwt, userDTO);
     }
 
+    /**
+     * Crée un nouvel utilisateur avec rôle par défaut ROLE_USER.
+     * Génère un code de vérification temporaire envoyé par email.
+     *
+     * @param request Données d'inscription
+     * @return Informations publiques du nouvel utilisateur
+     * @throws ResponseStatusException si email ou username déjà utilisés
+     */
     @Override
     @Transactional
     public RegisterResponseDTO register(RegisterRequestDTO request) {
@@ -116,6 +131,12 @@ public class AuthServiceImpl implements AuthService {
         return new RegisterResponseDTO(saved.getId(), saved.getEmail(), saved.isVerified());
     }
 
+    /**
+     * Valide le compte utilisateur à l'aide d'un code de vérification temporaire.
+     *
+     * @param request Contient l'email et le code de vérification
+     * @throws ResponseStatusException si le code est invalide ou expiré
+     */
     @Override
     @Transactional
     public void verify(VerifyRequestDTO request) {
@@ -149,7 +170,16 @@ public class AuthServiceImpl implements AuthService {
         return String.format("%06d", n);
     }
 
-
+    /**
+     * Génère un nouveau refresh token pour un utilisateur donné.
+     *
+     * Si un deviceId est fourni, les anciens refresh tokens associés
+     * à ce device sont supprimés (rotation par device).
+     *
+     * @param idUser Identifiant de l'utilisateur
+     * @param deviceId Identifiant du device (optionnel)
+     * @return La valeur du refresh token généré
+     */
     @Override
     @Transactional
     public String generateRefreshToken(String idUser, String deviceId) {
@@ -177,6 +207,18 @@ public class AuthServiceImpl implements AuthService {
         return tokenValue;
     }
 
+    /**
+     * Valide un refresh token existant et applique une rotation.
+     *
+     * Le token est supprimé puis remplacé par un nouveau.
+     * Si un deviceId est fourni, il doit correspondre à celui enregistré
+     * (protection contre le vol de token).
+     *
+     * @param tokenValue Valeur du refresh token
+     * @param deviceId Identifiant du device
+     * @return Une paire contenant le nouveau refresh token et un nouveau JWT
+     * @throws RuntimeException si le token est invalide, expiré ou ne correspond pas au device
+     */
     @Override
     @Transactional
     public TokenPair validateRefreshToken(String tokenValue,  String deviceId) {

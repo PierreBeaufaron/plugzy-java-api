@@ -7,7 +7,7 @@ public class StationListItemDTO {
     private String name;
     private Double power;
     private Double price;
-    private boolean freeStanding;
+    private Boolean freeStanding;
 
     private String address;
     private String zipCode;

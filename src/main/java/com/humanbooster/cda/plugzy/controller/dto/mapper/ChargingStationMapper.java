@@ -1,13 +1,17 @@
 package com.humanbooster.cda.plugzy.controller.dto.mapper;
 
 import com.humanbooster.cda.plugzy.controller.dto.station.StationDetailsDTO;
+import com.humanbooster.cda.plugzy.controller.dto.station.StationListItemDTO;
 import com.humanbooster.cda.plugzy.controller.dto.station.StationMarkerDTO;
 import com.humanbooster.cda.plugzy.entity.ChargingStation;
+import com.humanbooster.cda.plugzy.repository.projection.StationListItemProjection;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface ChargingStationMapper {
+
+    StationListItemDTO toListItemDto(StationListItemProjection projection);
 
     @Mapping(target = "latitude", source = "group.location.latitude")
     @Mapping(target = "longitude", source = "group.location.longitude")
